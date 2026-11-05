@@ -13,14 +13,29 @@ android {
         applicationId = "com.hydrogen.screentester"
         minSdk = 31
         targetSdk = 37
-        versionCode = 19
-        versionName = "3.1"
+        versionCode = 20
+        versionName = "3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    val keystorePath = System.getenv("SIGNING_STORE_FILE")
+    signingConfigs {
+        if (!keystorePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (!keystorePath.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             // 开启混淆压缩代码
             isMinifyEnabled = true
             // 开启资源缩减，剔除没用到的图片、图标

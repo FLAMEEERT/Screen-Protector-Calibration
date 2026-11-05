@@ -176,6 +176,7 @@ fun HomePage() {
     // 测试项数据列表
     val testItems = listOf(
         Triple("屏幕黑边遮挡测试", "适配 Android 12+ 物理圆角", Icons.Default.ScreenshotMonitor) to TestActivity::class.java,
+        Triple("贴膜辅助对齐", "常亮防误触固定校准，精准对准屏幕边缘", Icons.Default.CropFree) to ProtectorGuideActivity::class.java,
         Triple("屏幕色彩与坏点测试", "纯色背景检测坏点与漏光", Icons.Default.FormatColorFill) to ColorTestActivity::class.java,
         Triple("屏幕灰阶测试", "检测屏幕色彩过渡与暗部细节", Icons.Default.Gradient) to GrayscaleTestActivity::class.java,
         Triple("屏幕白平衡测试", "多级离散灰阶检测各亮度下的色偏情况", Icons.Default.Tonality) to WhiteBalanceTestActivity::class.java,
@@ -189,6 +190,7 @@ fun HomePage() {
     // 搜索关键词映射
     val searchKeywords = listOf(
         listOf("屏幕黑边遮挡测试"),
+        listOf("贴膜辅助对齐", "贴膜", "固定校准", "防误触", "常亮", "释放屏幕"),
         listOf("屏幕色彩与坏点测试", "坏点"),
         listOf("屏幕灰阶测试", "灰阶"),
         listOf("屏幕白平衡测试", "平衡"),

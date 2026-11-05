@@ -43,6 +43,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".ProtectorGuideActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ScreenTester" />
+
+        <activity
             android:name=".ColorTestActivity"
             android:exported="false" />
 

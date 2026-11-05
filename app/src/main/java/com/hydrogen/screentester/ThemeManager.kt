@@ -131,7 +131,7 @@ object ThemeSettings {
     var multiColorSegmentLength by mutableFloatStateOf(0f) // 渐变颜色长度（0表示使用默认中间值）
 
     // 更新下载源
-    var updateDownloadSource by mutableStateOf("gitee")
+    var updateDownloadSource by mutableStateOf("github")
 
     // 自动检查更新开关（默认开启，关闭后只能手动检查）
     var autoCheckUpdateEnabled by mutableStateOf(true)
@@ -534,7 +534,7 @@ object ThemeSettings {
         multiColorSegmentLength = prefs.getFloat("multi_color_segment_length", 0f)
 
         // 读取更新下载源
-        updateDownloadSource = prefs.getString("update_source", "gitee") ?: "gitee"
+        updateDownloadSource = prefs.getString("update_source", "github") ?: "github"
 
         // 读取自动检查更新开关
         autoCheckUpdateEnabled = prefs.getBoolean("auto_check_update_enabled", true)

@@ -1,0 +1,122 @@
+name: Android Build & Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "可选：手动触发发版的 Tag 名称（如 v3.2），留空则仅编译产物"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Signed Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Set up Gradle Cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Release Signing Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          KEYSTORE_FILE="$RUNNER_TEMP/release-signing.keystore"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_FILE"
+            echo "SIGNING_STORE_FILE=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_FILE" \
+              -storetype PKCS12 \
+              -alias screentester \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass screentester123 \
+              -keypass screentester123 \
+              -dname "CN=ScreenTester, OU=Mobile, O=ScreenTester, L=CN, S=CN, C=CN"
+            echo "SIGNING_STORE_FILE=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "SIGNING_STORE_PASSWORD=screentester123" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_ALIAS=screentester" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_PASSWORD=screentester123" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Release APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --stacktrace
+
+      - name: Collect APK Output
+        id: apk
+        run: |
+          VERSION_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          RAW_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$RAW_APK" ]; then
+            echo "No APK found in app/build/outputs/apk/release!" >&2
+            exit 1
+          fi
+          OUT_APK="ScreenTester-v${VERSION_NAME}.apk"
+          cp "$RAW_APK" "$OUT_APK"
+          echo "apk_path=$OUT_APK" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScreenTester-v${{ steps.apk.outputs.version_name }}-apk
+          path: ${{ steps.apk.outputs.apk_path }}
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="${{ inputs.release_tag }}"
+          fi
+          cat << 'EOF' > "$RUNNER_TEMP/release-notes.md"
+          #归类
+          新增 主页 贴膜辅助对齐 测试项卡片
+          新增 贴膜辅助对齐 物理圆角外框、十字对称中心线与四角内侧定位标
+          新增 贴膜辅助对齐 黑底青线 / 黑底白线 / 纯白照尘 / 跟随设置 底色与线宽预设
+          新增 贴膜辅助对齐 固定校准常亮防误触锁定（隔离全屏触控、拦截侧滑返回、锁定屏幕方向、可选联动系统屏幕固定）
+          新增 贴膜辅助对齐 两步式防擦拭释放条（轻点唤醒后单指右滑到底并保持 1 秒释放，防止酒精湿巾与刮板误触发）
+          EOF
+          sed -i 's/^          //' "$RUNNER_TEMP/release-notes.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${{ steps.apk.outputs.apk_path }}" --clobber
+          else
+            gh release create "$TAG" "${{ steps.apk.outputs.apk_path }}" \
+              --title "ScreenTester ${TAG}" \
+              --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi

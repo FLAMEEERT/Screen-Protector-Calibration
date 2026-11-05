@@ -22,13 +22,13 @@ object UpdateManager {
     private const val KEY_IGNORED_VERSION = "ignored_version"
 
     private fun apiUrl(): String = if (ThemeSettings.updateDownloadSource == "github") {
-        "https://api.github.com/repos/byHydrogen/ScreenTester/releases/latest"
+        "https://api.github.com/repos/FLAMEEERT/Screen-Protector-Calibration/releases/latest"
     } else {
         "https://gitee.com/api/v5/repos/byHydrogen/screen-tester/releases/latest"
     }
 
     fun releasePageUrl(): String = if (ThemeSettings.updateDownloadSource == "github") {
-        "https://github.com/byHydrogen/ScreenTester/releases"
+        "https://github.com/FLAMEEERT/Screen-Protector-Calibration/releases"
     } else {
         "https://gitee.com/byHydrogen/screen-tester/releases"
     }
